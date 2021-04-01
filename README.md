@@ -21,8 +21,9 @@ echo "Hello, world!\n";
 # Proposal
 
 - initial setup, create SSH keys for further usage
-- similar to Ansible, apply bootstrap and update target server via SSH
-- major three commands: init -> apply -> status
+- similar to Ansible, apply changes to target server via SSH only
+- define bootstrap, meta and content in templates
+- major steps: init -> update -> status
 
 
 # Code structure
