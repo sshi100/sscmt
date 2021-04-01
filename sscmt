@@ -11,13 +11,21 @@ function usage() {
     echo
     echo "Examples:"
     echo "$0 init web-server1"
-    echo "$0 apply web-server1"
+    echo "$0 update web-server1"
     echo "$0 add-package web-server1 \"appX appY appZ\""
     echo "$0 remove-package web-server1 \"appY\""
     echo "$0 status web-server1 \"appY\""
     exit 1
 }
 
+function error_check() {
+    code=$1
+    msg=$2
+    if [ ! $code -eq 0 ]; then
+        echo "ERROR: $msg"
+        exit 2
+    fi
+}
 
 [[ -z "$target" ]] && usage "Missing parameters"
 
@@ -35,6 +43,7 @@ FILE_HOSTIP=$INIT_FOLDER/$target.hostip
 SSH_PRIVATE_KEY=$INIT_FOLDER/ssh-$target
 
 echo "`date`: Starting $command $target"
+target_ip=$(cat $FILE_HOSTIP)
 if [ "$command" == "init" ]; then
     if [ ! -d $INIT_FOLDER ]; then
         mkdir -p $INIT_FOLDER
@@ -47,41 +56,40 @@ if [ "$command" == "init" ]; then
       ssh-keygen -b 2048 -t rsa -f $SSH_PRIVATE_KEY -q -N ""
       ssh-copy-id -i $SSH_PRIVATE_KEY.pub root@$target_ip
       code=$?
-      if [ ! $code -eq 0 ]; then
-        echo "ERROR: failed to create SSH key somehow. Please check"
-        exit 2
-      fi
+      error_check $code "failed to create SSH key somehow. Please check"
       echo $target_ip > $FILE_HOSTIP 
     fi
 
     # setup information
-    cp -f $TEMPLATE_FOLDER/$TEMPLATE_META $FILE_META
     cp -f $TEMPLATE_FOLDER/$TEMPLATE_BOOTSTRAP $FILE_BOOTSTRAP
-    cp -f $TEMPLATE_FOLDER/$TEMPLATE_HOMEPAGE $FILE_HOMEPAGE
-
-    exit 0
-fi
-
-target_ip=$(cat $FILE_HOSTIP)
-if [ "$command" == "apply" ]; then
-    source $FILE_META
-
-    # bootstrap
-    #ssh -t -q -i $SSH_PRIVATE_KEY root@$target_ip "bash -c 'echo Hello'"
-    ssh -t -q -i $SSH_PRIVATE_KEY root@$target_ip < $FILE_BOOTSTRAP
+    cp -f $TEMPLATE_FOLDER/$TEMPLATE_META $FILE_META
 
     # meta data handling
-    content="$(cat $FILE_HOMEPAGE | base64)"
+    source $FILE_META
     ssh -t -q -i $SSH_PRIVATE_KEY root@$target_ip "bash -c ' \
       chmod $CMT_PERMISSION $CMT_HOMEPAGE; \
       chown $CMT_OWNER $CMT_HOMEPAGE; \
       chgrp $CMT_GROUP $CMT_HOMEPAGE; \
     '"
+    code=$?
+    error_check $code "failed to update meta data. Please check"
     
-    # apply home page
+    # bootstrap
+    ssh -t -q -i $SSH_PRIVATE_KEY root@$target_ip < $FILE_BOOTSTRAP
+    code=$?
+    error_check $code "failed to run bootstrap. Please check"
+fi
+
+if [ "$command" == "update" ]; then
+    # update home page
+    source $FILE_META
+    cp -f $TEMPLATE_FOLDER/$TEMPLATE_HOMEPAGE $FILE_HOMEPAGE
+    content="$(cat $FILE_HOMEPAGE | base64)"
     ssh -t -q -i $SSH_PRIVATE_KEY root@$target_ip "bash -c ' \
       echo \"$content\" | base64 -d > $CMT_HOMEPAGE; \
     '"
+    code=$?
+    error_check $code "failed to update home page. Please check"
 
     # check if working
     curl http://$target_ip/ -I
@@ -97,6 +105,8 @@ if [ "$command" == "add-package" ]; then
     ssh -t -q -i $SSH_PRIVATE_KEY root@$target_ip "bash -c ' \
       apt-get install -q -y $packages; needrestart -b -ra; \
     '"
+    code=$?
+    error_check $code "failed to add packages. Please check"
 fi
 
 if [ "$command" == "remove-package" ]; then
@@ -107,6 +117,8 @@ if [ "$command" == "remove-package" ]; then
     ssh -t -q -i $SSH_PRIVATE_KEY root@$target_ip "bash -c ' \
       apt-get remove -q -y $packages; needrestart -b -ra; \
     '"
+    code=$?
+    error_check $code "failed to remove packages. Please check"
 fi
 
 if [ "$command" == "status" ]; then

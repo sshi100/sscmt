@@ -1,6 +1,6 @@
-# Installer
+# Configuration Management Tool for PHP Web application
 
-A rudimentary configuration management tool and use it to configure servers for production service of a simple PHP web application. Do not use off-the-shelf tools like (but not limited to) Puppet,  Chef, Fabric, or Ansible. Instead, implement a tool to meet the following specifications and then use that tool to configure the two servers.
+A rudimentary configuration management tool and use it to configure servers for production service of a simple PHP web application. Do not use off-the-shelf tools like (but not limited to) Puppet, Chef, Fabric, or Ansible. Instead, implement a tool to meet the following specifications and then use that tool to configure the two servers.
 
 Requirements for the rudimentary configuration management tool:
 1. If the tool has dependencies not available on a standard Ubuntu instance you may include a bootstrap.sh program to resolve them
@@ -23,6 +23,7 @@ echo "Hello, world!\n";
 - major three commands: init -> apply -> status
 
 # Code structure
+```
 ├── LICENSE
 ├── README.md
 ├── sscmt
@@ -30,6 +31,7 @@ echo "Hello, world!\n";
     ├── php.bootstrap
     ├── php.homepage
     └── php.meta
+```
 
 # Usage
 ./sscmt <command> <target> <params>
@@ -41,18 +43,32 @@ Examples:
 ./sscmt add-package web-server1 "appX appY appZ"
 ./sscmt remove-package web-server1 "appY"
 
-# Instial setup
-1. checkout from https://github.com/sshi100/sscmt
-2. run `./sscmt init <target>`  # target: a unique name of server
-3. run `./sscmt apply <target>`
+# Initial setup
 
-# Modify Templates and Deploy
-1. modify bootstrap or homepage or meta configuration
-templates templates/
-2. rerun `./sscmt init <target>`
-3. rerun `./sscmt apply <target>`
+```
+./sscmt init <target>  # target: a unique name of server
+./sscmt apply <target>
+```
+Note: SSH keys and meta data saved under ~/.sscmt/
+
+# Change page content and Deploy
+
+modify homepage under templates/php.homepage, run:
+```
+./sscmt apply <target>
+
+```
+
+# Modify meta or bootstrap
+modify bootstrap or meta configuration under templates, run:
+```
+./sscmt init <target>  # target: a unique name of server
+./sscmt apply <target>
+``````
 
 # Check status
-`./sscmt status`
+run `./sscmt status`
 
 # TODO
+- apply to all targets together in one run
+- support different languages
