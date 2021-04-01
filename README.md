@@ -15,14 +15,18 @@ header("Content-Type: text/plain");
 echo "Hello, world!\n";
 ?>
 ```
-*  Both servers must respond 200 OK and include the string "Hello, world!" in their response to requests from curl -sv http://ip-address (public)
+* The server must respond 200 OK and include the string "Hello, world!" in their response to requests from curl -sv http://ip-address (public)
+
 
 # Proposal
+
 - initial setup, create SSH keys for further usage
 - similar to Ansible, apply bootstrap and update target server via SSH
 - major three commands: init -> apply -> status
 
+
 # Code structure
+
 ```
 ├── LICENSE
 ├── README.md
@@ -33,7 +37,10 @@ echo "Hello, world!\n";
     └── php.meta
 ```
 
+
 # Usage
+
+```
 ./sscmt <command> <target> <params>
 
 Examples:
@@ -42,6 +49,7 @@ Examples:
 ./sscmt status web-server1 "appY"
 ./sscmt add-package web-server1 "appX appY appZ"
 ./sscmt remove-package web-server1 "appY"
+```
 
 # Initial setup
 
@@ -50,6 +58,7 @@ Examples:
 ./sscmt apply <target>
 ```
 Note: SSH keys and meta data saved under ~/.sscmt/
+
 
 # Change page content and Deploy
 
@@ -60,6 +69,7 @@ modify homepage under templates/php.homepage, run:
 ```
 
 # Modify meta or bootstrap
+
 modify bootstrap or meta configuration under templates, run:
 ```
 ./sscmt init <target>  # target: a unique name of server
@@ -67,8 +77,11 @@ modify bootstrap or meta configuration under templates, run:
 ``````
 
 # Check status
+
 run `./sscmt status`
 
+
 # TODO
+
 - apply to all targets together in one run
 - support different languages
