@@ -1,0 +1,4 @@
+CMT_PERMISSION=644
+CMT_OWNER=www-data
+CMT_GROUP=www-data
+CMT_HOMEPAGE=/var/www/html/index.php

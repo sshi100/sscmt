@@ -1,0 +1,6 @@
+<?php
+  header("Content-Type: text/plain");
+  echo "Hello, world!\n";
+  $realIP = file_get_contents("http://ipecho.net/plain");
+  echo "I am on $realIP";
+?>

@@ -1,0 +1,120 @@
+#!/bin/bash
+
+command=$1
+target=$2
+type=php
+
+function usage() {
+    echo $1
+    echo "Usage:"
+    echo "$0 <command> <target> <params>"
+    echo
+    echo "Examples:"
+    echo "$0 init web-server1"
+    echo "$0 apply web-server1"
+    echo "$0 add-package web-server1 \"appX appY appZ\""
+    echo "$0 remove-package web-server1 \"appY\""
+    echo "$0 status web-server1 \"appY\""
+    exit 1
+}
+
+
+[[ -z "$target" ]] && usage "Missing parameters"
+
+TEMPLATE_FOLDER=templates
+TEMPLATE_BOOTSTRAP=$type.bootstrap
+TEMPLATE_META=$type.meta
+TEMPLATE_HOMEPAGE=$type.homepage
+
+INIT_FOLDER=~/.sscmt
+FILE_BOOTSTRAP=$INIT_FOLDER/$target.$TEMPLATE_BOOTSTRAP
+FILE_META=$INIT_FOLDER/$target.$TEMPLATE_META
+FILE_HOMEPAGE=$INIT_FOLDER/$target.$TEMPLATE_HOMEPAGE
+FILE_HOSTIP=$INIT_FOLDER/$target.hostip
+
+SSH_PRIVATE_KEY=$INIT_FOLDER/ssh-$target
+
+echo "`date`: Starting $command $target"
+if [ "$command" == "init" ]; then
+    if [ ! -d $INIT_FOLDER ]; then
+        mkdir -p $INIT_FOLDER
+    fi
+
+    # create SSH keys
+    if [ ! -f $SSH_PRIVATE_KEY ]; then
+      echo "Setup SSH key for $target SSH-based configuration management"
+      echo -n "Please input server IP for $target: " && read target_ip
+      ssh-keygen -b 2048 -t rsa -f $SSH_PRIVATE_KEY -q -N ""
+      ssh-copy-id -i $SSH_PRIVATE_KEY.pub root@$target_ip
+      code=$?
+      if [ ! $code -eq 0 ]; then
+        echo "ERROR: failed to create SSH key somehow. Please check"
+        exit 2
+      fi
+      echo $target_ip > $FILE_HOSTIP 
+    fi
+
+    # setup information
+    cp -f $TEMPLATE_FOLDER/$TEMPLATE_META $FILE_META
+    cp -f $TEMPLATE_FOLDER/$TEMPLATE_BOOTSTRAP $FILE_BOOTSTRAP
+    cp -f $TEMPLATE_FOLDER/$TEMPLATE_HOMEPAGE $FILE_HOMEPAGE
+
+    exit 0
+fi
+
+target_ip=$(cat $FILE_HOSTIP)
+if [ "$command" == "apply" ]; then
+    source $FILE_META
+
+    # bootstrap
+    #ssh -t -q -i $SSH_PRIVATE_KEY root@$target_ip "bash -c 'echo Hello'"
+    ssh -t -q -i $SSH_PRIVATE_KEY root@$target_ip < $FILE_BOOTSTRAP
+
+    # meta data handling
+    content="$(cat $FILE_HOMEPAGE | base64)"
+    ssh -t -q -i $SSH_PRIVATE_KEY root@$target_ip "bash -c ' \
+      chmod $CMT_PERMISSION $CMT_HOMEPAGE; \
+      chown $CMT_OWNER $CMT_HOMEPAGE; \
+      chgrp $CMT_GROUP $CMT_HOMEPAGE; \
+    '"
+    
+    # apply home page
+    ssh -t -q -i $SSH_PRIVATE_KEY root@$target_ip "bash -c ' \
+      echo \"$content\" | base64 -d > $CMT_HOMEPAGE; \
+    '"
+
+    # check if working
+    curl http://$target_ip/ -I
+    code=$?
+    [[ $code -eq 0 ]] && echo "Web service on $target($target_ip): OK" ||  echo "Web service on $target($target_ip): NG"
+fi
+
+if [ "$command" == "add-package" ]; then
+    packages="$3"
+    [[ -z "$packages" ]] && usage "No packages defined"
+
+    # add Debian package
+    ssh -t -q -i $SSH_PRIVATE_KEY root@$target_ip "bash -c ' \
+      apt-get install -q -y $packages; needrestart -b -ra; \
+    '"
+fi
+
+if [ "$command" == "remove-package" ]; then
+    packages="$3"
+    [[ -z "$packages" ]] && usage "No packages defined"
+
+    # add Debian package
+    ssh -t -q -i $SSH_PRIVATE_KEY root@$target_ip "bash -c ' \
+      apt-get remove -q -y $packages; needrestart -b -ra; \
+    '"
+fi
+
+if [ "$command" == "status" ]; then
+    curl http://$target_ip/ -I
+    code=$?
+    [[ $code -eq 0 ]] && echo "Web service on $target($target_ip): OK" ||  echo "Web service on $target($target_ip): NG"
+
+fi
+
+echo "`date`: Done $command $target"
+exit 0

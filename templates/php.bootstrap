@@ -1,0 +1,9 @@
+# setup for minimal php support for apache2
+sudo apt-get update -y
+sudo apt-get install -y apache2 php libapache2-mod-php
+sudo apt-get install needrestart
+
+[[ -f /var/www/html/index.html ]] && sudo mv /var/www/html/index.html /var/www/html/index.html.old
+sudo touch /var/www/html/index.php
+
+sudo service apache2 restart
