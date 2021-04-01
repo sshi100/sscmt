@@ -60,9 +60,14 @@ if [ "$command" == "init" ]; then
       echo $target_ip > $FILE_HOSTIP 
     fi
 
-    # setup information
+    # prepare from templates to ~/.sscmt
     cp -f $TEMPLATE_FOLDER/$TEMPLATE_BOOTSTRAP $FILE_BOOTSTRAP
     cp -f $TEMPLATE_FOLDER/$TEMPLATE_META $FILE_META
+    
+    # bootstrap
+    ssh -t -q -i $SSH_PRIVATE_KEY root@$target_ip < $FILE_BOOTSTRAP
+    code=$?
+    error_check $code "failed to run bootstrap. Please check"
 
     # meta data handling
     source $FILE_META
@@ -73,11 +78,6 @@ if [ "$command" == "init" ]; then
     '"
     code=$?
     error_check $code "failed to update meta data. Please check"
-    
-    # bootstrap
-    ssh -t -q -i $SSH_PRIVATE_KEY root@$target_ip < $FILE_BOOTSTRAP
-    code=$?
-    error_check $code "failed to run bootstrap. Please check"
 fi
 
 if [ "$command" == "update" ]; then

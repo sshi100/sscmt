@@ -81,7 +81,7 @@ modify bootstrap or meta configuration under templates, run:
 run `./sscmt status`
 
 
-# TODO
+# Better TODO
 
 - apply to all targets together in one run
 - support different languages
